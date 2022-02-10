@@ -1,45 +1,44 @@
 import urllib.request
 import json
-
-client_id = '7FRPipGO9IO51Z4NPqFd'
-client_secret = 'dmsRkRQVlQ'
-
-def getRequestUrl(Url):
-    req = urllib.request.Request(Url) # 네이버서버에 보낼 요청객체를 생성
-    req.add_header("X-Naver-Client-Id", client_id) # 위에서 만들어진 요청객체에 client_id를 포함시킴
-    req.add_header("X-Naver-Client-Secret", client_secret)
-
-    response = urllib.request.urlopen(req) #네이버 서버에 요청객체 req를 전달하여 응답을 받아 response에 저장
-    if response.getcode() == 200: #응갑코드가 200이면 정상 호출
-        print('호출성공!!')
-        ret = response.read().decode('utf-8')
-        return ret
-    else:
-        print('호출에러-호출에러코드:', response.getcode())
-        print('에러방생 주소:',Url)
-        return None
-
-
-
-def getNaverSearch(node, srcText, start, display):
-    baseUrl = "https://openapi.naver.com/v1/search" # 네이버 기본 api 주소
-    node = "/%s.json" % node
-    param = "?query=%s&start=%s&display=%s" % (srcText, start, display)
-    api_Url = baseUrl + node + param # https://openapi.naver.com/v1/search/news.json?query='BTS'
-    responseDecode = getRequestUrl(api_Url) # 호출성공시 디코딩된 응답 데이터를 저장
-
+import datetime
+import time
+import getNaverSearch
+import getPostData
+import word_cloud
 
 def main():
     node = 'news' # 검색카테고리를 news로 설정
-    srcText = input('원하시는 검색어를 입력하세요:') # 검색어를 입력
-    jsonResponse = getNaverSearch(node, srcText, 1, 100) # news 카테고리에서 입력된 검색어가 들어간 뉴스를 1~100개 추출하여 응답
+    jsonResult=[]
+    srcText = input('원하시는 검색어를 입력하세요:') # 검색어를 입력 받음
+    jsonResponse = getNaverSearch.getNaverSearch(node, srcText, 1, 100) # news 카테고리에서 입력된 검색어가 들어간 뉴스를 1~100개 추출하여 응답
+    print(jsonResponse['total'])
+    total = jsonResponse['total']
 
-    for post in jsonResponse: # 응답된 json 에서 기사를 추출
-        pass
+    count = 0
+숕
+    while((jsonResponse != None) and (jsonResponse['display'] != 0)):
+        for post in jsonResponse['items']: # 응답된 json 에서 기사를 추출
+            count = count + 1
+            getPostData.getPostData(post, jsonResult)
 
-    with open('파일이름','w', encoding='utf-8') as outfile:
-        jsonFile = json.dumps()
-        outfile.write(jsonFile)
+        start = jsonResponse['start'] + jsonResponse['display']
+        jsonResponse = getNaverSearch.getNaverSearch(node, srcText, start, 100)
 
-if __name__ == '_-main__':
+    try:
+        with open('%s_네이버_%s.json' % (srcText, node), 'w', encoding='utf-8') as outfile:
+            jsonFile = json.dumps(jsonResult, indent=4, sort_keys=True, ensure_ascii=False)
+            outfile.write(jsonFile)
+        print('파일 출력에 성공하였습니다')
+    except:
+        print('파일출력 에러가 발생하였습니다.')
+
+    print('전체 검색 기사 건수 : ', total)
+    print('전체 출력 건수 : ', count)
+
+    # 워드클라우드 출력
+    file_name = '%s_네이버_%s.json' % (srcText, node)
+    del_word = srcText
+    word_cloud.word_cloud(file_name, del_word)
+
+if __name__ == '__main__':
     main()
